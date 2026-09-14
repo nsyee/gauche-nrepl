@@ -1,0 +1,5 @@
+#!/usr/bin/env gosh
+;; Usage: bin/nrepl-server [PORT]   (NREPL_PORT env var also honoured)
+(add-load-path "../lib" :relative)
+(use nrepl.server)
+(define (main args) (nrepl-server-main args))
