@@ -80,8 +80,12 @@
   (guard (e [#t #f]) (thread-join! (~ server 'thread) 1))
   (undefined))
 
+;; Poll with a timeout: an untimed thread-join! never returns to a point
+;; where Gauche delivers signals, so SIGINT/SIGTERM would be ignored.
 (define (nrepl-server-wait server)
-  (thread-join! (~ server 'thread)))
+  (let loop ()
+    (guard (e [(join-timeout-exception? e) (loop)])
+      (thread-join! (~ server 'thread) 0.5))))
 
 ;; Entry point for bin/nrepl-server.
 (define (nrepl-server-main args)
@@ -91,5 +95,9 @@
          [server (start-nrepl-server port)])
     (format #t "nREPL Gauche server listening on port ~a\n" (nrepl-server-port server))
     (flush)
-    (nrepl-server-wait server)
-    0))
+    (guard (e [(and (<unhandled-signal-error> e)
+                    (memv (~ e 'signal) (list SIGINT SIGTERM)))
+               (nrepl-server-stop! server)
+               0])
+      (nrepl-server-wait server)
+      0)))
