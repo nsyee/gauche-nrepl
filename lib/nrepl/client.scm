@@ -114,7 +114,10 @@
     (unwind-protect
         (let loop ()
           (display "nrepl> ") (flush)
-          (let1 line (read-line)
+          (let1 line (guard (e [(and (<unhandled-signal-error> e)
+                                     (eqv? (~ e 'signal) SIGINT))
+                                (eof-object)])
+                       (read-line))
             (cond
              [(eof-object? line) (newline)]
              [(member (string-trim-both line) '(":quit" ":exit"))]
